@@ -1,0 +1,1040 @@
+{
+  "name": "R50 | Cinematic Adverts System - AUTOMATED",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "generate-advert",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [400, 300],
+      "id": "webhook-trigger",
+      "name": "🚀 Webhook Trigger",
+      "webhookId": "cinematic-adverts-api"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Validate incoming request and generate job ID\nconst body = $input.first().json.body;\n\n// Validation\nif (!body.project_name) {\n  return [{\n    json: {\n      error: true,\n      message: \"Missing required field: project_name\",\n      code: \"VALIDATION_ERROR\"\n    }\n  }];\n}\n\nif (!body.creative_direction) {\n  return [{\n    json: {\n      error: true,\n      message: \"Missing required field: creative_direction\",\n      code: \"VALIDATION_ERROR\"\n    }\n  }];\n}\n\nif (!body.core_image_url) {\n  return [{\n    json: {\n      error: true,\n      message: \"Missing required field: core_image_url\",\n      code: \"VALIDATION_ERROR\"\n    }\n  }];\n}\n\nif (!body.core_elements_url) {\n  return [{\n    json: {\n      error: true,\n      message: \"Missing required field: core_elements_url\",\n      code: \"VALIDATION_ERROR\"\n    }\n  }];\n}\n\n// Generate unique job ID\nconst jobId = `job_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;\nconst timestamp = new Date().toISOString();\n\n// Prepare job data\nconst jobData = {\n  job_id: jobId,\n  project_name: body.project_name,\n  creative_direction: body.creative_direction,\n  core_image_url: body.core_image_url,\n  core_elements_url: body.core_elements_url,\n  voice_id: body.voice_id || \"EXAVITQu4vr4xnSDxMaL\", // Default voice\n  num_scenes: body.num_scenes || 5,\n  status: \"processing\",\n  stage: \"initialized\",\n  created_at: timestamp,\n  updated_at: timestamp,\n  error: false,\n  webhook_url: body.webhook_url || null // Optional callback URL\n};\n\nreturn [{\n  json: jobData\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [600, 300],
+      "id": "validate-input",
+      "name": "✅ Validate & Create Job"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{$json.error}}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [800, 300],
+      "id": "check-validation",
+      "name": "❓ Valid?"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{\n  \"error\": true,\n  \"message\": $json.message,\n  \"code\": $json.code\n}}",
+        "options": {
+          "responseCode": 400
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1000, 200],
+      "id": "respond-error",
+      "name": "❌ Return Error"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "Cinematic Adverts Jobs"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Jobs",
+          "mode": "list",
+          "cachedResultName": "Jobs"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "job_id": "={{$json.job_id}}",
+            "project_name": "={{$json.project_name}}",
+            "status": "={{$json.status}}",
+            "stage": "={{$json.stage}}",
+            "created_at": "={{$json.created_at}}",
+            "updated_at": "={{$json.updated_at}}",
+            "creative_direction": "={{$json.creative_direction}}",
+            "core_image_url": "={{$json.core_image_url}}",
+            "core_elements_url": "={{$json.core_elements_url}}",
+            "voice_id": "={{$json.voice_id}}",
+            "num_scenes": "={{$json.num_scenes}}"
+          }
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [1000, 400],
+      "id": "create-job-record",
+      "name": "📝 Create Job Record"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{\n  \"success\": true,\n  \"job_id\": \"{{$json.job_id}}\",\n  \"status\": \"processing\",\n  \"message\": \"Your cinematic advert is being generated. Use the job_id to check status.\",\n  \"status_url\": \"{{$execution.url}}/webhook/check-status?job_id={{$json.job_id}}\",\n  \"created_at\": \"{{$json.created_at}}\"\n}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1200, 400],
+      "id": "respond-success",
+      "name": "✅ Return Job ID"
+    },
+    {
+      "parameters": {
+        "resource": "image",
+        "operation": "analyze",
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-3-pro-preview",
+          "mode": "list"
+        },
+        "text": "Please look at this image and describe it in detail. What is shown in the character section, the setting section, and the product section? Explain what you see in each part so the image can be fully translated into text.",
+        "imageUrls": "={{$json.core_elements_url}}",
+        "simplify": false,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1,
+      "position": [1400, 400],
+      "id": "analyze-elements",
+      "name": "🔍 Analyze Elements Board",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "Uf69yXezkjIZP6Ah",
+          "name": "Google Gemini(PaLM) Api account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=The user's creative direction:\n{{$json.creative_direction}}\n\n***\n\nThe user's elements board:\n{{$json.candidates[0].content.parts[0].text}}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "system_prompt: |\n  ## 🎬 SYSTEM PROMPT: 40-Second Ad Generator Agent\n\n  A – Ask:\n    Generate one JSON package containing an ad script, a music prompt, and visually driven scenes based on a user query, brand, and any provided visual reference boards. \n\nThe number of scenes you generate are based on the user's creative direction. If none are provided, do 5 scenes.\n\n  G – Guidance:\n    role: Multimedia ad director and storyteller\n    output_count: 1\n    character_limit: Script should fit a 40-second read\n    constraints:\n      - Music, image, and transition prompts must include contextually relevant meta-token keywords when appropriate.\n      - Each scene must contain:\n        • scene - Scene Number followed by Title of Scene\n        • starting_image_prompt (YAML format using structured ClearCam-style keys)\n        • ending_image_prompt (short evolution of the starting image)\n        • transition_prompt (short transition description based on both the starting and ending image)\n      - Scene transitions must be cinematic, coherent, and descriptive while remaining concise.\n\n      🎬 Guidelines for script:\n        - If script is given by the user, USE THAT EXACTLY. No exceptions.\n        - The script should be one continuous text.\n        - This is spoken by the character, so have the dialogue be based on the character.\n        - No labels, no formatting — just the script.\n        - Use \"...\" to indicate pauses.\n        - No double quotes inside the script text.\n        - Don't use \"—\", use \"...\" in their place\n\n      🎵 Guidelines for music prompt:\n        - Must be fewer than 450 characters.\n        - Should match the emotional arc and visual tone of the scenes.\n        - Summarize and distill the user's music description into a single high-quality generative prompt.\n\n      🧱 Global visual consistency:\n        - Derive a base visual language (lighting, mood, and aesthetic) from the creative direction and any elements board.\n        - Keep Lighting, Mood, and Aesthetic consistent across all scenes unless the user explicitly specifies a change.\n\n      🖼️ Guideline for starting_image_prompt:\n        - Must be in YAML format using these keys:\n          Composition: describe how the frame is arranged and where the subject sits in the shot\n          Lighting: explain the light source and how it shapes shadows and contrast\n          Environment: note the setting and the main objects that define the space\n          Action: state what the subject is doing in clear simple terms\n          Refinements: list small details with meta tokens like skin texture, fabric folds, grain, glare, etc.\n          Camera: name the camera type, the lens, the focus distance, and the shooting distance\n          Aesthetic: describe the style or visual feel\n          Mood: give the emotional tone of the scene\n          Subject: describe who or what the image is centered around\n        - Keep each field brief: 1–2 short sentences or a tight phrase per key.\n        - Keep the overall starting_image_prompt compact (aim for no more than 8–10 lines of YAML).\n        - For Aesthetic (by default, unless the user specifies otherwise), prioritize:\n          photorealistic, cinematic, feature film still, live action still\n        - For Refinements, use comma-separated meta-token tags in this style:\n          ultra_fine_skin_texture, subtle_makeup_sheen, iris_detail_8k, micro_reflections_of_glass_pillars, soft_film_grain, gentle_lens_glare, [cinematic], [macro]\n        - For Camera, prioritize technical phrasing such as:\n          35mm wide-angle, deep depth of field, steady tracking\n        - Ensure that Lighting, Aesthetic, and Mood remain aligned with the global visual language across all scenes.\n\n      🎯 Guideline for ending_image_prompt:\n        - Assume it will be applied to the starting image.\n        - Write it as a short description (1–2 concise sentences) of how the starting image changes\n        - Keep it concise and focused on the most important visual change.\n\n      🎞️ Guideline for transition_prompt:\n        - Write it with the assumption that both starting and ending images are known.\n        - Keep it very short and clear (1–2 concise sentences).\n        - Prioritize what the character does between starting and ending frames.\n        - If the camera moves, explicitly state that it moves slowly (e.g. camera rotates slowly, camera zooms out slowly).\n        - Prioritize describing camera motion IF it is relevant, and default to SLOW movement (e.g. camera moves slowly, camera dollies in slowly, camera tilts slowly).\n        - Avoid extra exposition; focus on the motion and  continuity of the shot.\n\n  E – Example and  N – Notation:\n    format: JSON\n    example_output: |\n      {\n        \"script\": \"Your eyes create the world you pull into reality... Shift your sight, and the world shifts with you... So if you choose what others fail to see... Then the world opens in ways only you can imagine... Gentle Monster. See the Uncommon.\",\n        \"music_prompt\": \"High-fashion experimental electronic track with deep sub-bass, crystalline glass chimes for macro details, and a hypnotic mid-tempo pulse during movement, collapsing into vacuum-like silence then resolving into airy, ethereal ambience.\",\n        \"scenes\": [\n          {\n            \"scene\": \"Scene 1 - The Eye\",\n            \"starting_image_prompt\": \"Composition: Extreme close-up on Makima-inspired right eye centered in frame, lashes arcing across upper third.\\nLighting: Soft diffused key from above with subtle red Mars-toned reflections shimmering in the iris.\\nEnvironment: Futuristic corridor and Martian landscape hinted only as distorted reflections in the cornea.\\nAction: The eye holds perfectly still with one slow blink.\\nRefinements: ultra_fine_skin_texture, subtle_makeup_sheen, iris_detail_8k, micro_reflections_of_glass_pillars, soft_film_grain, gentle_lens_glare, [cinematic], [macro].\\nCamera: 100mm macro lens, shallow depth of field, steady framing.\\nAesthetic: photorealistic, cinematic, feature film still, live action still.\\nMood: quiet, hypnotic, anticipatory.\\nSubject: Makima-inspired woman's eye filling most of the frame.\",\n            \"ending_image_prompt\": \"Camera slowly dollies closer until the iris fills the frame and faint corridor pillars sharpen inside the reflection as the pupil dilates slightly.\",\n            \"transition_prompt\": \"As the line is spoken, her focus shifts and the reflections slowly sharpen into corridor geometry, preparing the match cut into the hallway.\"\n          },\n          {\n            \"scene\": \"Scene 2 - Corridor Establishing Shot\",\n            \"starting_image_prompt\": \"Composition: Wide shot from behind the character, centered in a perfectly symmetrical corridor.\\nLighting: Cool white overhead strips casting clean reflections with subtle red Mars bounce on the polished floor.\\nEnvironment: Futuristic glass-pillared eyewear corridor with distant GENTLE MONSTER signage and Mars landscape beyond the windows.\\nAction: Character walks away from camera at a calm, measured pace.\\nRefinements: Long black trenchcoat, tailored shirt and tie, black gloves, soft_film_grain, gentle_lens_glare, [cinematic].\\nCamera: 35mm wide-angle, deep depth of field, steady tracking backward.\\nAesthetic: photorealistic, cinematic, feature film still, live action still.\\nMood: mysterious, controlled, high-end.\\nSubject: Makima-inspired woman centered in the corridor.\",\n            \"ending_image_prompt\": \"Camera slowly tilts into a Dutch angle as she moves deeper into the corridor, stretching floor reflections and making the space feel slightly unstable.\",\n            \"transition_prompt\": \"Camera rotates clockwise very slowly while she walks forward with deliberate grace, letting tension build as the corridor subtly twists.\"\n          }\n        ]\n      }\n\n  T – Tools:\n    You have access to the following tools. Each one is described clearly:\n    - Think Tool: Use this to reflect and reason before responding.\n"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [1600, 400],
+      "id": "ai-agent-prompts",
+      "name": "🤖 Generate Prompts (AI Agent)"
+    },
+    {
+      "parameters": {
+        "model": "google/gemini-3-pro-preview",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [1600, 200],
+      "id": "llm-model",
+      "name": "🧠 LLM Model",
+      "credentials": {
+        "openRouterApi": {
+          "id": "hmP48RU4dJfJaaSV",
+          "name": "OpenRouter account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"script\": \"Full 40-second voiceover script as one continuous text with pauses indicated by ellipses.\",\n  \"music_prompt\": \"Concise generative prompt (<450 characters) that matches emotional and visual arc.\",\n  \"scenes\": [\n    {\n      \"scene\": \"Scene X - Title of Scene\",\n      \"starting_image_prompt\": \"Composition: ...\\\\nLighting: ...\\\\nEnvironment: ...\\\\nAction: ...\\\\nRefinements: ultra_fine_skin_texture, subtle_makeup_sheen, ...\\\\nCamera: 35mm wide-angle, deep depth of field, steady tracking\\\\nAesthetic: photorealistic, cinematic, feature film still, live action still\\\\nMood: ...\\\\nSubject: ...\",\n      \"ending_image_prompt\": \"Short 1–2 sentence evolution of the starting frame, prioritizing slow camera movement if present.\",\n      \"transition_prompt\": \"Short 1–2 sentence description of character and camera action between frames, specifying slow camera movement when it occurs.\"\n    }\n  ]\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [1600, 600],
+      "id": "output-structure",
+      "name": "📋 Structure Output"
+    },
+    {
+      "parameters": {},
+      "type": "@n8n/n8n-nodes-langchain.toolThink",
+      "typeVersion": 1.1,
+      "position": [1600, 0],
+      "id": "think-tool",
+      "name": "💭 Think Tool"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Update job with generated prompts\nconst aiOutput = $input.first().json.output;\nconst jobData = $node[\"✅ Validate & Create Job\"].json;\n\nreturn [{\n  json: {\n    job_id: jobData.job_id,\n    project_name: jobData.project_name,\n    core_image_url: jobData.core_image_url,\n    core_elements_url: jobData.core_elements_url,\n    voice_id: jobData.voice_id,\n    script: aiOutput.script,\n    music_prompt: aiOutput.music_prompt,\n    scenes: aiOutput.scenes,\n    stage: \"prompts_generated\",\n    updated_at: new Date().toISOString()\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1800, 400],
+      "id": "merge-prompts",
+      "name": "🔗 Merge Prompts with Job"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "list"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Jobs",
+          "mode": "list"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "stage": "={{$json.stage}}",
+            "updated_at": "={{$json.updated_at}}",
+            "script": "={{$json.script}}",
+            "music_prompt": "={{$json.music_prompt}}"
+          }
+        },
+        "options": {
+          "lookupColumn": "job_id",
+          "lookupValue": "={{$json.job_id}}"
+        }
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [2000, 400],
+      "id": "update-job-prompts",
+      "name": "💾 Update Job (Prompts)"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "scenes",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [2200, 400],
+      "id": "split-scenes",
+      "name": "✂️ Split Scenes"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.wavespeed.ai/api/v3/google/nano-banana-pro/edit",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"aspect_ratio\": \"16:9\",\n  \"enable_base64_output\": false,\n  \"enable_sync_mode\": true,\n  \"output_format\": \"png\",\n  \"prompt\": {{JSON.stringify($json.starting_image_prompt)}},\n  \"resolution\": \"2k\",\n  \"images\": [\n    \"{{$node[\"🔗 Merge Prompts with Job\"].json.core_image_url}}\",\n    \"{{$node[\"🔗 Merge Prompts with Job\"].json.core_elements_url}}\"\n  ]\n}",
+        "options": {
+          "batching": {
+            "batch": {
+              "batchSize": 1,
+              "batchInterval": 2000
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2400, 400],
+      "id": "create-start-image",
+      "name": "🖼️ Create Start Frame",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "IZqnM1MEeUfWcob3",
+          "name": "WaveSpeed Credentials"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.wavespeed.ai/api/v3/google/nano-banana-pro/edit",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"aspect_ratio\": \"16:9\",\n  \"enable_base64_output\": false,\n  \"enable_sync_mode\": true,\n  \"output_format\": \"png\",\n  \"prompt\": {{JSON.stringify($json.ending_image_prompt)}},\n  \"resolution\": \"2k\",\n  \"images\": [\"{{$node[\"🖼️ Create Start Frame\"].json.data.outputs[0]}}\"]\n}",
+        "options": {
+          "batching": {
+            "batch": {
+              "batchSize": 1
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2600, 400],
+      "id": "create-end-image",
+      "name": "🖼️ Create End Frame",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "IZqnM1MEeUfWcob3",
+          "name": "WaveSpeed Credentials"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Prepare scene data for storage\nconst startFrame = $node[\"🖼️ Create Start Frame\"].json;\nconst endFrame = $node[\"🖼️ Create End Frame\"].json;\nconst sceneData = $input.first().json;\nconst jobData = $node[\"🔗 Merge Prompts with Job\"].json;\n\n// Extract scene number from scene title\nconst sceneMatch = sceneData.scene.match(/Scene (\\d+)/);\nconst sceneNumber = sceneMatch ? parseInt(sceneMatch[1]) : 0;\n\n// Generate unique scene ID\nconst sceneId = `scene_${jobData.job_id}_${sceneNumber}`;\n\nreturn [{\n  json: {\n    scene_id: sceneId,\n    job_id: jobData.job_id,\n    scene_number: sceneNumber,\n    scene_title: sceneData.scene,\n    start_image_url: startFrame.data.outputs[0],\n    end_image_url: endFrame.data.outputs[0],\n    transition_prompt: sceneData.transition_prompt,\n    video_status: \"pending\",\n    created_at: new Date().toISOString()\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2800, 400],
+      "id": "prepare-scene-data",
+      "name": "📦 Prepare Scene Data"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "list"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Scenes",
+          "mode": "list"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "scene_id": "={{$json.scene_id}}",
+            "job_id": "={{$json.job_id}}",
+            "scene_number": "={{$json.scene_number}}",
+            "scene_title": "={{$json.scene_title}}",
+            "start_image_url": "={{$json.start_image_url}}",
+            "end_image_url": "={{$json.end_image_url}}",
+            "transition_prompt": "={{$json.transition_prompt}}",
+            "video_status": "={{$json.video_status}}",
+            "created_at": "={{$json.created_at}}"
+          }
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [3000, 400],
+      "id": "store-scene-sheets",
+      "name": "💾 Store Scene to Sheets"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://kie.wavespeed.ai/api/veo/generations",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"prompt\": {{JSON.stringify($json.transition_prompt)}},\n  \"first_frame_image\": \"{{$json.start_image_url}}\",\n  \"last_frame_image\": \"{{$json.end_image_url}}\",\n  \"aspect_ratio\": \"16:9\",\n  \"duration\": 8\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [3200, 400],
+      "id": "generate-video",
+      "name": "🎬 Generate Video (Veo)",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "GY8EwBg1KMzSwh9X",
+          "name": "Kie AI Credentials"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Store video generation ID and start polling\nconst sceneData = $input.first().json;\nconst veoResponse = sceneData;\n\nreturn [{\n  json: {\n    scene_id: $node[\"📦 Prepare Scene Data\"].json.scene_id,\n    job_id: $node[\"📦 Prepare Scene Data\"].json.job_id,\n    scene_number: $node[\"📦 Prepare Scene Data\"].json.scene_number,\n    generation_id: veoResponse.generation_id,\n    video_status: veoResponse.status || \"processing\",\n    poll_attempt: 0,\n    max_attempts: 20\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [3400, 400],
+      "id": "init-video-poll",
+      "name": "🔄 Init Video Poll"
+    },
+    {
+      "parameters": {
+        "amount": 15,
+        "unit": "seconds"
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [3600, 400],
+      "id": "wait-video",
+      "name": "⏱️ Wait 15s"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://kie.wavespeed.ai/api/veo/generations/{{$json.generation_id}}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [3800, 400],
+      "id": "check-video-status",
+      "name": "🔍 Check Video Status",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "GY8EwBg1KMzSwh9X",
+          "name": "Kie AI Credentials"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Merge poll data with status response\nconst statusResponse = $input.first().json;\nconst pollData = $node[\"🔄 Init Video Poll\"].json;\n\nreturn [{\n  json: {\n    scene_id: pollData.scene_id,\n    job_id: pollData.job_id,\n    scene_number: pollData.scene_number,\n    generation_id: pollData.generation_id,\n    video_status: statusResponse.status,\n    video_url: statusResponse.video_url || null,\n    poll_attempt: pollData.poll_attempt + 1,\n    max_attempts: pollData.max_attempts,\n    error: statusResponse.error || null\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [4000, 400],
+      "id": "merge-video-status",
+      "name": "🔗 Merge Video Status"
+    },
+    {
+      "parameters": {
+        "mode": "expression",
+        "output": "={{$json.video_status}}",
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "string": [
+                  {
+                    "value1": "={{$json.video_status}}",
+                    "value2": "completed"
+                  }
+                ]
+              },
+              "outputKey": "completed"
+            },
+            {
+              "conditions": {
+                "string": [
+                  {
+                    "value1": "={{$json.video_status}}",
+                    "value2": "failed"
+                  }
+                ]
+              },
+              "outputKey": "failed"
+            },
+            {
+              "conditions": {
+                "number": [
+                  {
+                    "value1": "={{$json.poll_attempt}}",
+                    "operation": "larger",
+                    "value2": "={{$json.max_attempts}}"
+                  }
+                ]
+              },
+              "outputKey": "timeout"
+            }
+          ]
+        },
+        "fallbackOutput": "processing"
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [4200, 400],
+      "id": "check-video-complete",
+      "name": "🎯 Video Complete?"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "list"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Scenes",
+          "mode": "list"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "video_status": "={{$json.video_status}}",
+            "video_url": "={{$json.video_url}}",
+            "generation_id": "={{$json.generation_id}}"
+          }
+        },
+        "options": {
+          "lookupColumn": "scene_id",
+          "lookupValue": "={{$json.scene_id}}"
+        }
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [4400, 300],
+      "id": "update-scene-video",
+      "name": "✅ Update Scene (Video Complete)"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "list"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Scenes",
+          "mode": "list"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "video_status": "failed",
+            "error": "={{$json.error || 'Video generation failed'}}"
+          }
+        },
+        "options": {
+          "lookupColumn": "scene_id",
+          "lookupValue": "={{$json.scene_id}}"
+        }
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [4400, 500],
+      "id": "mark-video-failed",
+      "name": "❌ Mark Video Failed"
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "destinationFieldName": "completed_scenes",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [4600, 300],
+      "id": "aggregate-scenes",
+      "name": "📊 Aggregate All Scenes"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Prepare data for parallel music and voice generation\nconst scenes = $json.completed_scenes;\nconst jobData = $node[\"🔗 Merge Prompts with Job\"].json;\n\nreturn [{\n  json: {\n    job_id: jobData.job_id,\n    project_name: jobData.project_name,\n    script: jobData.script,\n    music_prompt: jobData.music_prompt,\n    voice_id: jobData.voice_id,\n    scenes: scenes,\n    stage: \"scenes_completed\",\n    updated_at: new Date().toISOString()\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [4800, 300],
+      "id": "prepare-audio-gen",
+      "name": "🎵 Prepare Audio Generation"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.suno.ai/v1/generate",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"prompt\": {{JSON.stringify($json.music_prompt)}},\n  \"duration\": 40,\n  \"instrumental\": true\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [5000, 200],
+      "id": "generate-music",
+      "name": "🎵 Generate Music (Suno)",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "SUNO_CREDENTIAL_ID",
+          "name": "Suno AI Credentials"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.elevenlabs.io/v1/text-to-speech/{{$json.voice_id}}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"text\": {{JSON.stringify($json.script)}},\n  \"model_id\": \"eleven_monolingual_v1\",\n  \"voice_settings\": {\n    \"stability\": 0.5,\n    \"similarity_boost\": 0.75\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [5000, 400],
+      "id": "generate-voice",
+      "name": "🎤 Generate Voice (ElevenLabs)",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "ELEVENLABS_CREDENTIAL_ID",
+          "name": "ElevenLabs Credentials"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Init music polling\nconst musicResponse = $input.first().json;\nconst jobData = $node[\"🎵 Prepare Audio Generation\"].json;\n\nreturn [{\n  json: {\n    job_id: jobData.job_id,\n    music_generation_id: musicResponse.id || musicResponse.generation_id,\n    music_status: musicResponse.status || \"processing\",\n    poll_attempt: 0,\n    max_attempts: 20\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [5200, 200],
+      "id": "init-music-poll",
+      "name": "🔄 Init Music Poll"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Init voice polling\nconst voiceResponse = $input.first().json;\nconst jobData = $node[\"🎵 Prepare Audio Generation\"].json;\n\nreturn [{\n  json: {\n    job_id: jobData.job_id,\n    voice_generation_id: voiceResponse.id || voiceResponse.generation_id,\n    voice_url: voiceResponse.audio_url || voiceResponse.url || null,\n    voice_status: voiceResponse.status || (voiceResponse.audio_url ? \"completed\" : \"processing\"),\n    poll_attempt: 0,\n    max_attempts: 20\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [5200, 400],
+      "id": "init-voice-poll",
+      "name": "🔄 Init Voice Poll"
+    },
+    {
+      "parameters": {
+        "amount": 15,
+        "unit": "seconds"
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [5400, 200],
+      "id": "wait-music",
+      "name": "⏱️ Wait Music 15s"
+    },
+    {
+      "parameters": {
+        "amount": 5,
+        "unit": "seconds"
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [5400, 400],
+      "id": "wait-voice",
+      "name": "⏱️ Wait Voice 5s"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://api.suno.ai/v1/generate/{{$json.music_generation_id}}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [5600, 200],
+      "id": "check-music-status",
+      "name": "🔍 Check Music Status",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "SUNO_CREDENTIAL_ID",
+          "name": "Suno AI Credentials"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://api.elevenlabs.io/v1/history/{{$json.voice_generation_id}}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [5600, 400],
+      "id": "check-voice-status",
+      "name": "🔍 Check Voice Status",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "ELEVENLABS_CREDENTIAL_ID",
+          "name": "ElevenLabs Credentials"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Merge music status\nconst statusResponse = $input.first().json;\nconst pollData = $node[\"🔄 Init Music Poll\"].json;\n\nreturn [{\n  json: {\n    job_id: pollData.job_id,\n    music_generation_id: pollData.music_generation_id,\n    music_status: statusResponse.status,\n    music_url: statusResponse.audio_url || statusResponse.url || null,\n    poll_attempt: pollData.poll_attempt + 1,\n    max_attempts: pollData.max_attempts,\n    error: statusResponse.error || null\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [5800, 200],
+      "id": "merge-music-status",
+      "name": "🔗 Merge Music Status"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Merge voice status\nconst statusResponse = $input.first().json;\nconst pollData = $node[\"🔄 Init Voice Poll\"].json;\n\nreturn [{\n  json: {\n    job_id: pollData.job_id,\n    voice_generation_id: pollData.voice_generation_id,\n    voice_status: statusResponse.status || pollData.voice_status,\n    voice_url: statusResponse.audio_url || statusResponse.url || pollData.voice_url,\n    poll_attempt: pollData.poll_attempt + 1,\n    max_attempts: pollData.max_attempts,\n    error: statusResponse.error || null\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [5800, 400],
+      "id": "merge-voice-status",
+      "name": "🔗 Merge Voice Status"
+    },
+    {
+      "parameters": {
+        "mode": "expression",
+        "output": "={{$json.music_status}}",
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "string": [
+                  {
+                    "value1": "={{$json.music_status}}",
+                    "value2": "completed"
+                  }
+                ]
+              },
+              "outputKey": "completed"
+            },
+            {
+              "conditions": {
+                "string": [
+                  {
+                    "value1": "={{$json.music_status}}",
+                    "value2": "failed"
+                  }
+                ]
+              },
+              "outputKey": "failed"
+            }
+          ]
+        },
+        "fallbackOutput": "processing"
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [6000, 200],
+      "id": "check-music-complete",
+      "name": "🎯 Music Complete?"
+    },
+    {
+      "parameters": {
+        "mode": "expression",
+        "output": "={{$json.voice_status}}",
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "string": [
+                  {
+                    "value1": "={{$json.voice_status}}",
+                    "value2": "completed"
+                  }
+                ]
+              },
+              "outputKey": "completed"
+            },
+            {
+              "conditions": {
+                "string": [
+                  {
+                    "value1": "={{$json.voice_status}}",
+                    "value2": "failed"
+                  }
+                ]
+              },
+              "outputKey": "failed"
+            }
+          ]
+        },
+        "fallbackOutput": "processing"
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [6000, 400],
+      "id": "check-voice-complete",
+      "name": "🎯 Voice Complete?"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "mergeByFields": {
+          "values": [
+            {
+              "field1": "job_id",
+              "field2": "job_id"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [6200, 300],
+      "id": "merge-audio-assets",
+      "name": "🔗 Merge Music + Voice"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Combine all assets into final package\nconst audioData = $input.first().json;\nconst scenesData = $node[\"📊 Aggregate All Scenes\"].json;\nconst jobData = $node[\"🎵 Prepare Audio Generation\"].json;\n\n// Extract video URLs from scenes\nconst videoUrls = scenesData.completed_scenes.map(scene => scene.video_url);\n\nreturn [{\n  json: {\n    job_id: jobData.job_id,\n    project_name: jobData.project_name,\n    status: \"completed\",\n    stage: \"final_assets_ready\",\n    music_url: audioData.music_url,\n    voice_url: audioData.voice_url,\n    video_urls: videoUrls,\n    scene_count: videoUrls.length,\n    completed_at: new Date().toISOString(),\n    updated_at: new Date().toISOString()\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [6400, 300],
+      "id": "prepare-final-assets",
+      "name": "📦 Prepare Final Assets"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "list"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Jobs",
+          "mode": "list"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "status": "={{$json.status}}",
+            "stage": "={{$json.stage}}",
+            "music_url": "={{$json.music_url}}",
+            "voice_url": "={{$json.voice_url}}",
+            "completed_at": "={{$json.completed_at}}",
+            "updated_at": "={{$json.updated_at}}"
+          }
+        },
+        "options": {
+          "lookupColumn": "job_id",
+          "lookupValue": "={{$json.job_id}}"
+        }
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [6600, 300],
+      "id": "update-job-final",
+      "name": "✅ Update Job (Complete)"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{$node[\"✅ Validate & Create Job\"].json.webhook_url != null}}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [6800, 300],
+      "id": "check-callback",
+      "name": "❓ Has Callback?"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$node[\"✅ Validate & Create Job\"].json.webhook_url}}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"job_id\": \"{{$json.job_id}}\",\n  \"project_name\": \"{{$json.project_name}}\",\n  \"status\": \"{{$json.status}}\",\n  \"music_url\": \"{{$json.music_url}}\",\n  \"voice_url\": \"{{$json.voice_url}}\",\n  \"video_urls\": {{JSON.stringify($json.video_urls)}},\n  \"completed_at\": \"{{$json.completed_at}}\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [7000, 200],
+      "id": "send-callback",
+      "name": "📞 Send Callback Webhook"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [7000, 400],
+      "id": "no-callback",
+      "name": "⏭️ Skip Callback"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "🚀 Webhook Trigger": {
+      "main": [[{"node": "✅ Validate & Create Job", "type": "main", "index": 0}]]
+    },
+    "✅ Validate & Create Job": {
+      "main": [[{"node": "❓ Valid?", "type": "main", "index": 0}]]
+    },
+    "❓ Valid?": {
+      "main": [
+        [{"node": "❌ Return Error", "type": "main", "index": 0}],
+        [{"node": "📝 Create Job Record", "type": "main", "index": 0}]
+      ]
+    },
+    "📝 Create Job Record": {
+      "main": [[{"node": "✅ Return Job ID", "type": "main", "index": 0}, {"node": "🔍 Analyze Elements Board", "type": "main", "index": 0}]]
+    },
+    "🔍 Analyze Elements Board": {
+      "main": [[{"node": "🤖 Generate Prompts (AI Agent)", "type": "main", "index": 0}]]
+    },
+    "🤖 Generate Prompts (AI Agent)": {
+      "main": [[{"node": "🔗 Merge Prompts with Job", "type": "main", "index": 0}]]
+    },
+    "🧠 LLM Model": {
+      "ai_languageModel": [[{"node": "🤖 Generate Prompts (AI Agent)", "type": "ai_languageModel", "index": 0}]]
+    },
+    "📋 Structure Output": {
+      "ai_outputParser": [[{"node": "🤖 Generate Prompts (AI Agent)", "type": "ai_outputParser", "index": 0}]]
+    },
+    "💭 Think Tool": {
+      "ai_tool": [[{"node": "🤖 Generate Prompts (AI Agent)", "type": "ai_tool", "index": 0}]]
+    },
+    "🔗 Merge Prompts with Job": {
+      "main": [[{"node": "💾 Update Job (Prompts)", "type": "main", "index": 0}]]
+    },
+    "💾 Update Job (Prompts)": {
+      "main": [[{"node": "✂️ Split Scenes", "type": "main", "index": 0}]]
+    },
+    "✂️ Split Scenes": {
+      "main": [[{"node": "🖼️ Create Start Frame", "type": "main", "index": 0}]]
+    },
+    "🖼️ Create Start Frame": {
+      "main": [[{"node": "🖼️ Create End Frame", "type": "main", "index": 0}]]
+    },
+    "🖼️ Create End Frame": {
+      "main": [[{"node": "📦 Prepare Scene Data", "type": "main", "index": 0}]]
+    },
+    "📦 Prepare Scene Data": {
+      "main": [[{"node": "💾 Store Scene to Sheets", "type": "main", "index": 0}]]
+    },
+    "💾 Store Scene to Sheets": {
+      "main": [[{"node": "🎬 Generate Video (Veo)", "type": "main", "index": 0}]]
+    },
+    "🎬 Generate Video (Veo)": {
+      "main": [[{"node": "🔄 Init Video Poll", "type": "main", "index": 0}]]
+    },
+    "🔄 Init Video Poll": {
+      "main": [[{"node": "⏱️ Wait 15s", "type": "main", "index": 0}]]
+    },
+    "⏱️ Wait 15s": {
+      "main": [[{"node": "🔍 Check Video Status", "type": "main", "index": 0}]]
+    },
+    "🔍 Check Video Status": {
+      "main": [[{"node": "🔗 Merge Video Status", "type": "main", "index": 0}]]
+    },
+    "🔗 Merge Video Status": {
+      "main": [[{"node": "🎯 Video Complete?", "type": "main", "index": 0}]]
+    },
+    "🎯 Video Complete?": {
+      "main": [
+        [{"node": "✅ Update Scene (Video Complete)", "type": "main", "index": 0}],
+        [{"node": "❌ Mark Video Failed", "type": "main", "index": 0}],
+        [{"node": "❌ Mark Video Failed", "type": "main", "index": 0}],
+        [{"node": "⏱️ Wait 15s", "type": "main", "index": 0}]
+      ]
+    },
+    "✅ Update Scene (Video Complete)": {
+      "main": [[{"node": "📊 Aggregate All Scenes", "type": "main", "index": 0}]]
+    },
+    "❌ Mark Video Failed": {
+      "main": [[{"node": "📊 Aggregate All Scenes", "type": "main", "index": 0}]]
+    },
+    "📊 Aggregate All Scenes": {
+      "main": [[{"node": "🎵 Prepare Audio Generation", "type": "main", "index": 0}]]
+    },
+    "🎵 Prepare Audio Generation": {
+      "main": [[{"node": "🎵 Generate Music (Suno)", "type": "main", "index": 0}, {"node": "🎤 Generate Voice (ElevenLabs)", "type": "main", "index": 0}]]
+    },
+    "🎵 Generate Music (Suno)": {
+      "main": [[{"node": "🔄 Init Music Poll", "type": "main", "index": 0}]]
+    },
+    "🎤 Generate Voice (ElevenLabs)": {
+      "main": [[{"node": "🔄 Init Voice Poll", "type": "main", "index": 0}]]
+    },
+    "🔄 Init Music Poll": {
+      "main": [[{"node": "⏱️ Wait Music 15s", "type": "main", "index": 0}]]
+    },
+    "🔄 Init Voice Poll": {
+      "main": [[{"node": "⏱️ Wait Voice 5s", "type": "main", "index": 0}]]
+    },
+    "⏱️ Wait Music 15s": {
+      "main": [[{"node": "🔍 Check Music Status", "type": "main", "index": 0}]]
+    },
+    "⏱️ Wait Voice 5s": {
+      "main": [[{"node": "🔍 Check Voice Status", "type": "main", "index": 0}]]
+    },
+    "🔍 Check Music Status": {
+      "main": [[{"node": "🔗 Merge Music Status", "type": "main", "index": 0}]]
+    },
+    "🔍 Check Voice Status": {
+      "main": [[{"node": "🔗 Merge Voice Status", "type": "main", "index": 0}]]
+    },
+    "🔗 Merge Music Status": {
+      "main": [[{"node": "🎯 Music Complete?", "type": "main", "index": 0}]]
+    },
+    "🔗 Merge Voice Status": {
+      "main": [[{"node": "🎯 Voice Complete?", "type": "main", "index": 0}]]
+    },
+    "🎯 Music Complete?": {
+      "main": [
+        [{"node": "🔗 Merge Music + Voice", "type": "main", "index": 0}],
+        [],
+        [{"node": "⏱️ Wait Music 15s", "type": "main", "index": 0}]
+      ]
+    },
+    "🎯 Voice Complete?": {
+      "main": [
+        [{"node": "🔗 Merge Music + Voice", "type": "main", "index": 1}],
+        [],
+        [{"node": "⏱️ Wait Voice 5s", "type": "main", "index": 0}]
+      ]
+    },
+    "🔗 Merge Music + Voice": {
+      "main": [[{"node": "📦 Prepare Final Assets", "type": "main", "index": 0}]]
+    },
+    "📦 Prepare Final Assets": {
+      "main": [[{"node": "✅ Update Job (Complete)", "type": "main", "index": 0}]]
+    },
+    "✅ Update Job (Complete)": {
+      "main": [[{"node": "❓ Has Callback?", "type": "main", "index": 0}]]
+    },
+    "❓ Has Callback?": {
+      "main": [
+        [],
+        [{"node": "📞 Send Callback Webhook", "type": "main", "index": 0}]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "tags": []
+}

@@ -1,0 +1,189 @@
+╔═══════════════════════════════════════════════════════════════════════════════╗
+║         R50 CINEMATIC ADVERTS - COMPLETE AUTOMATED WORKFLOW                   ║
+║                            Visual Flow Diagram                                 ║
+╚═══════════════════════════════════════════════════════════════════════════════╝
+
+PHASE 1: INITIALIZATION & VALIDATION
+┌───────────────────────────────────────────────────────────────────────────────┐
+│                                                                                │
+│   [Webhook POST]  →  [Validate]  →  [Valid?]  →  [Error Response (400)]      │
+│                                         │                                      │
+│                                         ↓                                      │
+│                                   [Create Job]  →  [Return Job ID (202)]      │
+│                                         │                                      │
+│                                         ↓                                      │
+│                                [Store to Sheets: "Jobs"]                       │
+│                                                                                │
+└───────────────────────────────────────────────────────────────────────────────┘
+
+PHASE 2: AI PROMPT GENERATION
+┌───────────────────────────────────────────────────────────────────────────────┐
+│                                                                                │
+│   [Analyze Elements Board]  →  [AI Agent (Gemini 3 Pro)]                      │
+│         (Gemini Vision)              │                                         │
+│                                      ↓                                         │
+│                             [Generate Structured JSON]                         │
+│                                      │                                         │
+│                                      ↓                                         │
+│                   ┌──────────────────┼──────────────────┐                     │
+│                   │                  │                  │                     │
+│               [Script]         [Music Prompt]    [Scenes Array]               │
+│                   │                  │                  │                     │
+│                   └──────────────────┼──────────────────┘                     │
+│                                      ↓                                         │
+│                              [Update Sheets: Job]                              │
+│                                                                                │
+└───────────────────────────────────────────────────────────────────────────────┘
+
+PHASE 3: SCENE PROCESSING (PARALLEL PER SCENE)
+┌───────────────────────────────────────────────────────────────────────────────┐
+│                                                                                │
+│   [Split Scenes]  →  For Each Scene:                                          │
+│                                                                                │
+│   ┌─────────────────────────────────────────────────────────────────────┐    │
+│   │  Scene N                                                             │    │
+│   │  ├─ [Generate Start Frame] (WaveSpeed Nano Banana Pro)              │    │
+│   │  │       ↓                                                           │    │
+│   │  ├─ [Generate End Frame] (WaveSpeed, uses start as base)            │    │
+│   │  │       ↓                                                           │    │
+│   │  ├─ [Prepare Scene Data] (package URLs + metadata)                  │    │
+│   │  │       ↓                                                           │    │
+│   │  └─ [Store to Sheets: "Scenes"] (scene_id, image URLs, etc.)       │    │
+│   └─────────────────────────────────────────────────────────────────────┘    │
+│                                                                                │
+└───────────────────────────────────────────────────────────────────────────────┘
+
+PHASE 4: VIDEO GENERATION WITH POLLING (PARALLEL PER SCENE)
+┌───────────────────────────────────────────────────────────────────────────────┐
+│                                                                                │
+│   For Each Scene:                                                              │
+│                                                                                │
+│   ┌─────────────────────────────────────────────────────────────────────┐    │
+│   │  [Generate Video] (Veo API: start + end images → video)             │    │
+│   │       ↓                                                              │    │
+│   │  [Init Poll State] (attempt: 0, max: 20)                            │    │
+│   │       ↓                                                              │    │
+│   │  ┌──────────────────────────────────────────┐                       │    │
+│   │  │  POLLING LOOP (15 second intervals)      │                       │    │
+│   │  │                                           │                       │    │
+│   │  │  [Wait 15s] → [Check Status] → [Switch]  │                       │    │
+│   │  │                                     │     │                       │    │
+│   │  │         ┌───────────────────────────┼─────┼──────┐               │    │
+│   │  │         │           │               │     │      │               │    │
+│   │  │    [Completed]  [Failed]      [Timeout]  [Processing]            │    │
+│   │  │         │           │               │          │                 │    │
+│   │  │         ↓           ↓               ↓          │                 │    │
+│   │  │    [Update]    [Mark Failed]  [Mark Failed]   │                 │    │
+│   │  │    [Sheets]    [Sheets]       [Sheets]        │                 │    │
+│   │  │         │           │               │          │                 │    │
+│   │  │         ↓           ↓               ↓          ↓                 │    │
+│   │  │         └───────────┴───────────────┘    [Loop Back] ◄──────────┘    │
+│   │  └──────────────────────────────────────────────┘                       │    │
+│   │                         ↓                                                │    │
+│   │                  [Video URL Stored]                                      │    │
+│   └─────────────────────────────────────────────────────────────────────┘    │
+│                                                                                │
+└───────────────────────────────────────────────────────────────────────────────┘
+
+PHASE 5: SCENE AGGREGATION
+┌───────────────────────────────────────────────────────────────────────────────┐
+│                                                                                │
+│   [Wait for All Scenes] → [Aggregate Array] → [Prepare Audio Gen]             │
+│                                                                                │
+└───────────────────────────────────────────────────────────────────────────────┘
+
+PHASE 6: PARALLEL AUDIO GENERATION
+┌───────────────────────────────────────────────────────────────────────────────┐
+│                                                                                │
+│                           [Scenes Complete]                                    │
+│                                   ↓                                            │
+│                               [SPLIT]                                          │
+│                                   │                                            │
+│                 ┌─────────────────┴─────────────────┐                         │
+│                 │                                   │                         │
+│          ┌──────▼──────┐                    ┌──────▼──────┐                  │
+│          │ MUSIC BRANCH │                    │ VOICE BRANCH │                  │
+│          └──────┬──────┘                    └──────┬──────┘                  │
+│                 │                                   │                         │
+│    [Generate Music (Suno)]         [Generate Voice (ElevenLabs)]              │
+│                 ↓                                   ↓                         │
+│         [Init Poll State]                   [Init Poll State]                 │
+│                 ↓                                   ↓                         │
+│    ┌────────────────────────┐      ┌────────────────────────┐               │
+│    │  MUSIC POLLING LOOP    │      │  VOICE POLLING LOOP    │               │
+│    │                        │      │                        │               │
+│    │  [Wait 15s]            │      │  [Wait 5s]             │               │
+│    │      ↓                 │      │      ↓                 │               │
+│    │  [Check Status]        │      │  [Check Status]        │               │
+│    │      ↓                 │      │      ↓                 │               │
+│    │  [Merge Status]        │      │  [Merge Status]        │               │
+│    │      ↓                 │      │      ↓                 │               │
+│    │  [Complete?]           │      │  [Complete?]           │               │
+│    │   │       │            │      │   │       │            │               │
+│    │  [✓]   [Loop]          │      │  [✓]   [Loop]          │               │
+│    │   │       ↑            │      │   │       ↑            │               │
+│    │   │       └────────────┘      │   │       └────────────┘               │
+│    │   ↓                           │   ↓                                     │
+│    └───┼───────────────────────────┘───┼─────────────────────┐              │
+│        │                               │                     │              │
+│        └───────────────┬───────────────┘                     │              │
+│                        ↓                                     │              │
+│                   [MERGE NODE]  ◄────────────────────────────┘              │
+│                        │                                                     │
+│                        ↓                                                     │
+│              [Both Audio Assets Ready]                                       │
+│                                                                              │
+└───────────────────────────────────────────────────────────────────────────────┘
+
+PHASE 7: FINAL ASSEMBLY & DELIVERY
+┌───────────────────────────────────────────────────────────────────────────────┐
+│                                                                                │
+│   [Merge Audio + Video Data]                                                  │
+│              ↓                                                                 │
+│   [Prepare Final Package]                                                     │
+│       - music_url                                                              │
+│       - voice_url                                                              │
+│       - video_urls[]                                                           │
+│       - status: "completed"                                                    │
+│              ↓                                                                 │
+│   [Update Sheets: Job → Final Status]                                         │
+│              ↓                                                                 │
+│   [Check Callback URL?]                                                       │
+│       │           │                                                            │
+│       ├─ YES → [Send Callback Webhook]                                        │
+│       └─ NO  → [Skip]                                                          │
+│                                                                                │
+│   WORKFLOW COMPLETE ✓                                                          │
+│                                                                                │
+└───────────────────────────────────────────────────────────────────────────────┘
+
+═══════════════════════════════════════════════════════════════════════════════
+
+KEY FEATURES:
+─────────────
+✓ Automatic polling loops with timeout handling
+✓ Parallel execution for scenes and audio
+✓ Google Sheets integration for debugging
+✓ Error handling and failure tracking
+✓ Optional webhook callbacks for completion
+✓ Rate limiting with batch processing
+
+TIMING BREAKDOWN:
+────────────────
+Phase 1: Initialization            →  < 1 second
+Phase 2: AI Prompt Generation       →  30-60 seconds
+Phase 3: Scene Image Generation     →  10-25 seconds (parallel)
+Phase 4: Video Generation + Poll    →  3-5 minutes (parallel)
+Phase 5: Aggregation                →  < 1 second
+Phase 6: Audio Generation + Poll    →  1-3 minutes (parallel)
+Phase 7: Final Assembly             →  < 1 second
+                                       ─────────────
+TOTAL ESTIMATED TIME:                  5-8 minutes
+
+POLLING INTERVALS:
+─────────────────
+Video:  15 seconds × 20 attempts = 5 minutes max
+Music:  15 seconds × 20 attempts = 5 minutes max
+Voice:   5 seconds × 20 attempts = 100 seconds max
+
+═══════════════════════════════════════════════════════════════════════════════
