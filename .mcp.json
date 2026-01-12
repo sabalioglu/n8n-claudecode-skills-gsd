@@ -7,8 +7,8 @@
         "MCP_MODE": "stdio",
         "LOG_LEVEL": "error",
         "DISABLE_CONSOLE_OUTPUT": "true",
-        "N8N_API_URL": "https://your-n8n-instance.com",
-        "N8N_API_KEY": "your-api-key"
+        "N8N_API_URL": "https://n8n.tsagroupllc.com/",
+        "N8N_API_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2NzMwYmY2OC04ZjhhLTQxYWQtYWIxNC0xYjZmNWRlMWZhYjAiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwiaWF0IjoxNzY3NTE4MzgwfQ.NvhjPHlf-e8uGe37fXhV8AZfwH6mnU0tliyPVc1FpdQ"
       }
     }
   }
