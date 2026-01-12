@@ -1,0 +1,214 @@
+{
+  "name": "R50 | Check Job Status API",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "check-status",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [400, 300],
+      "id": "status-webhook",
+      "name": "🔍 Status Check Webhook",
+      "webhookId": "check-job-status"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract and validate job_id from query parameters\nconst query = $input.first().json.query;\n\nif (!query || !query.job_id) {\n  return [{\n    json: {\n      error: true,\n      message: \"Missing required parameter: job_id\",\n      code: \"MISSING_JOB_ID\"\n    }\n  }];\n}\n\nreturn [{\n  json: {\n    job_id: query.job_id,\n    error: false\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [600, 300],
+      "id": "validate-job-id",
+      "name": "✅ Validate Job ID"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{$json.error}}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [800, 300],
+      "id": "check-valid",
+      "name": "❓ Valid?"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{\n  \"error\": true,\n  \"message\": $json.message,\n  \"code\": $json.code\n}}",
+        "options": {
+          "responseCode": 400
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1000, 200],
+      "id": "respond-error",
+      "name": "❌ Return Error"
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "list"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Jobs",
+          "mode": "list"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "job_id",
+              "lookupValue": "={{$json.job_id}}"
+            }
+          ]
+        },
+        "options": {
+          "returnAllMatches": false
+        }
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [1000, 400],
+      "id": "lookup-job",
+      "name": "🔍 Lookup Job"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "number": [
+            {
+              "value1": "={{$input.all().length}}",
+              "operation": "equal",
+              "value2": 0
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [1200, 400],
+      "id": "check-found",
+      "name": "❓ Job Found?"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{\n  \"error\": true,\n  \"message\": \"Job not found\",\n  \"code\": \"JOB_NOT_FOUND\",\n  \"job_id\": \"{{$node[\"✅ Validate Job ID\"].json.job_id}}\"\n}}",
+        "options": {
+          "responseCode": 404
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1400, 300],
+      "id": "respond-not-found",
+      "name": "❌ Job Not Found"
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "list"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Scenes",
+          "mode": "list"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "job_id",
+              "lookupValue": "={{$json.job_id}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [1400, 500],
+      "id": "get-scenes",
+      "name": "📋 Get Scenes"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Prepare comprehensive status response\nconst jobData = $node[\"🔍 Lookup Job\"].json;\nconst scenes = $input.all().map(item => item.json);\n\n// Calculate progress\nconst totalScenes = scenes.length;\nconst completedScenes = scenes.filter(s => s.video_status === 'completed').length;\nconst failedScenes = scenes.filter(s => s.video_status === 'failed').length;\nconst processingScenes = totalScenes - completedScenes - failedScenes;\n\nconst progressPercent = totalScenes > 0 ? Math.round((completedScenes / totalScenes) * 100) : 0;\n\n// Determine overall stage\nlet currentStage = jobData.stage || 'initialized';\nlet estimatedCompletion = null;\n\n// Estimate time remaining\nif (jobData.status === 'processing') {\n  const stages = {\n    'initialized': { progress: 5, eta: 480 },\n    'prompts_generated': { progress: 15, eta: 420 },\n    'images_created': { progress: 30, eta: 360 },\n    'scenes_completed': { progress: 70, eta: 180 },\n    'final_assets_ready': { progress: 95, eta: 30 }\n  };\n  \n  const stageInfo = stages[currentStage] || { progress: 50, eta: 240 };\n  estimatedCompletion = `${Math.floor(stageInfo.eta / 60)} minutes`;\n}\n\n// Build response\nconst response = {\n  success: true,\n  job_id: jobData.job_id,\n  project_name: jobData.project_name,\n  status: jobData.status,\n  stage: currentStage,\n  progress_percent: progressPercent,\n  estimated_completion: estimatedCompletion,\n  created_at: jobData.created_at,\n  updated_at: jobData.updated_at,\n  scenes: {\n    total: totalScenes,\n    completed: completedScenes,\n    processing: processingScenes,\n    failed: failedScenes\n  }\n};\n\n// Add final URLs if completed\nif (jobData.status === 'completed') {\n  response.results = {\n    music_url: jobData.music_url,\n    voice_url: jobData.voice_url,\n    video_urls: scenes.map(s => s.video_url).filter(Boolean),\n    completed_at: jobData.completed_at\n  };\n}\n\n// Add error info if failed\nif (jobData.status === 'failed') {\n  response.error_message = jobData.error_message;\n}\n\nreturn [{ json: response }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1600, 500],
+      "id": "prepare-response",
+      "name": "📦 Prepare Status Response"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{JSON.stringify($json, null, 2)}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1800, 500],
+      "id": "respond-status",
+      "name": "✅ Return Status"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "🔍 Status Check Webhook": {
+      "main": [[{"node": "✅ Validate Job ID", "type": "main", "index": 0}]]
+    },
+    "✅ Validate Job ID": {
+      "main": [[{"node": "❓ Valid?", "type": "main", "index": 0}]]
+    },
+    "❓ Valid?": {
+      "main": [
+        [{"node": "❌ Return Error", "type": "main", "index": 0}],
+        [{"node": "🔍 Lookup Job", "type": "main", "index": 0}]
+      ]
+    },
+    "🔍 Lookup Job": {
+      "main": [[{"node": "❓ Job Found?", "type": "main", "index": 0}]]
+    },
+    "❓ Job Found?": {
+      "main": [
+        [{"node": "❌ Job Not Found", "type": "main", "index": 0}],
+        [{"node": "📋 Get Scenes", "type": "main", "index": 0}]
+      ]
+    },
+    "📋 Get Scenes": {
+      "main": [[{"node": "📦 Prepare Status Response", "type": "main", "index": 0}]]
+    },
+    "📦 Prepare Status Response": {
+      "main": [[{"node": "✅ Return Status", "type": "main", "index": 0}]]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "tags": []
+}
