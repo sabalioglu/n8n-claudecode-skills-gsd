@@ -175,21 +175,25 @@ export function Generate() {
       );
 
       // Send to n8n webhook
-      const webhookUrl = 'https://n8n.tsagroupllc.com/webhook/ugc-video-gen';
+      const webhookUrl = import.meta.env.VITE_N8N_WEBHOOK_URL || 'https://n8n.tsagroupllc.com/webhook/ugc-video-gen';
+
+      // Extract duration number from video length string (e.g., "24s" -> 24)
+      const durationMatch = formData.videoLength.match(/(\d+)/);
+      const duration = durationMatch ? durationMatch[1] : '24';
 
       const webhookFormData = new FormData();
-      webhookFormData.append('Product Name', formData.productName);
-      webhookFormData.append('Product Description', formData.productDescription);
-      webhookFormData.append('Ad Type', formData.adType);
-      webhookFormData.append('Target Audience', formData.targetAudience);
-      webhookFormData.append('Platform', formData.platform);
-      webhookFormData.append('Video Length (includes problem scene + solution scenes)', formData.videoLength);
-      webhookFormData.append('Production Mode', formData.productionMode);
-      webhookFormData.append('UGC Style Details', formData.ugcStyleDetails);
-      webhookFormData.append('Additional Notes', formData.additionalNotes);
-      webhookFormData.append('Email', user!.email || '');
+      // Field names matching n8n workflow expectations
+      webhookFormData.append('job_id', job.id);
+      webhookFormData.append('userEmail', user!.email || '');
+      webhookFormData.append('productName', formData.productName);
+      webhookFormData.append('productDescription', formData.productDescription);
+      webhookFormData.append('targetAudience', formData.targetAudience);
+      webhookFormData.append('platform', formData.platform);
+      webhookFormData.append('duration', duration);
+      webhookFormData.append('ugcStyleDetails', formData.ugcStyleDetails);
+      webhookFormData.append('additionalNotes', formData.additionalNotes);
       if (formData.productImage) {
-        webhookFormData.append('data0', formData.productImage);
+        webhookFormData.append('data', formData.productImage);
       }
 
       const response = await fetch(webhookUrl, {

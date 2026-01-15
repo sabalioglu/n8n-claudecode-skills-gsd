@@ -1,4 +1,3 @@
-import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { getVideoJob } from '../lib/supabase';
@@ -26,20 +25,8 @@ import {
   Film,
 } from 'lucide-react';
 
-const processingSteps = [
-  { id: 1, name: 'Analyzing product image', duration: '~30s' },
-  { id: 2, name: 'Generating character profile', duration: '~1min' },
-  { id: 3, name: 'Creating AI avatar', duration: '~2min' },
-  { id: 4, name: 'Generating scene strategy', duration: '~1min' },
-  { id: 5, name: 'Creating start & end frames', duration: '~2min' },
-  { id: 6, name: 'Writing video script', duration: '~30s' },
-  { id: 7, name: 'Generating video', duration: '~3-5min' },
-  { id: 8, name: 'Final processing', duration: '~1min' },
-];
-
 export function Progress() {
   const { jobId } = useParams<{ jobId: string }>();
-  const [currentStep, setCurrentStep] = useState(1);
 
   const {
     data: job,
@@ -59,16 +46,6 @@ export function Progress() {
       return false;
     },
   });
-
-  // Simulate progress through steps
-  useEffect(() => {
-    if (job?.status === 'processing' || job?.status === 'pending') {
-      const interval = setInterval(() => {
-        setCurrentStep((prev) => (prev < processingSteps.length ? prev + 1 : 1));
-      }, 15000); // Change step every 15 seconds
-      return () => clearInterval(interval);
-    }
-  }, [job?.status]);
 
   if (isLoading) {
     return (
@@ -154,46 +131,67 @@ export function Progress() {
                     <h3 className="text-xl font-semibold mb-2">
                       Generating Your Video
                     </h3>
-                    <p className="text-[#94a3b8] text-center mb-6 max-w-md">
+                    <p className="text-[#94a3b8] text-center mb-4 max-w-md">
                       Our AI is crafting your UGC video. This typically takes
                       10-15 minutes.
                     </p>
 
-                    {/* Progress Steps */}
-                    <div className="w-full max-w-md">
-                      {processingSteps.map((step) => (
+                    {/* Progress Bar */}
+                    <div className="w-full max-w-md mb-4">
+                      <div className="flex justify-between text-sm mb-2">
+                        <span className="text-[#94a3b8]">Progress</span>
+                        <span className="text-indigo-400 font-medium">
+                          {job.progress_percentage || 0}%
+                        </span>
+                      </div>
+                      <div className="h-3 bg-[#2d2d4a] rounded-full overflow-hidden">
                         <div
-                          key={step.id}
-                          className={`flex items-center gap-3 py-2 px-3 rounded-lg mb-1 ${
-                            step.id === currentStep
-                              ? 'bg-indigo-500/20'
-                              : step.id < currentStep
-                              ? 'opacity-50'
-                              : 'opacity-30'
-                          }`}
-                        >
-                          {step.id < currentStep ? (
-                            <CheckCircle className="w-5 h-5 text-green-400" />
-                          ) : step.id === currentStep ? (
-                            <Loader2 className="w-5 h-5 text-indigo-400 spinner" />
-                          ) : (
-                            <div className="w-5 h-5 border-2 border-[#3d3d5a] rounded-full" />
-                          )}
-                          <span
-                            className={
-                              step.id === currentStep
-                                ? 'text-white'
-                                : 'text-[#94a3b8]'
-                            }
-                          >
-                            {step.name}
-                          </span>
-                          <span className="text-xs text-[#64748b] ml-auto">
-                            {step.duration}
-                          </span>
-                        </div>
-                      ))}
+                          className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full transition-all duration-500"
+                          style={{ width: `${job.progress_percentage || 0}%` }}
+                        />
+                      </div>
                     </div>
+
+                    {/* Current Step */}
+                    {job.current_step && (
+                      <div className="flex items-center gap-2 text-white bg-indigo-500/20 px-4 py-2 rounded-lg">
+                        <Loader2 className="w-4 h-4 text-indigo-400 spinner" />
+                        <span>{job.current_step}</span>
+                      </div>
+                    )}
+
+                    {/* Character Image Preview */}
+                    {job.character_image_url && (
+                      <div className="mt-6">
+                        <p className="text-sm text-[#64748b] mb-2 text-center">AI Character Generated</p>
+                        <img
+                          src={job.character_image_url}
+                          alt="AI Character"
+                          className="w-32 h-32 object-cover rounded-lg border-2 border-indigo-500/30"
+                        />
+                      </div>
+                    )}
+
+                    {/* Generated Scenes Preview */}
+                    {job.scenes && job.scenes.length > 0 && (
+                      <div className="mt-6 w-full max-w-md">
+                        <p className="text-sm text-[#64748b] mb-2">Generated Scenes</p>
+                        <div className="grid grid-cols-4 gap-2">
+                          {job.scenes.map((scene) => (
+                            <div key={scene.sceneNumber} className="relative">
+                              <img
+                                src={scene.sceneImageUrl}
+                                alt={`Scene ${scene.sceneNumber}`}
+                                className="w-full h-16 object-cover rounded"
+                              />
+                              <span className="absolute bottom-0 left-0 right-0 bg-black/60 text-xs text-center text-white py-0.5">
+                                {scene.sceneNumber}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ) : isFailed ? (
                   <div className="w-full h-full flex flex-col items-center justify-center p-8">

@@ -82,6 +82,17 @@ export interface Database {
           credits_used: number;
           created_at: string;
           completed_at: string | null;
+          updated_at: string | null;
+          current_step: string | null;
+          progress_percentage: number | null;
+          character_image_url: string | null;
+          product_analysis: Record<string, unknown> | null;
+          scenes: Array<{
+            sceneNumber: number;
+            sceneType: string;
+            sceneImageUrl: string;
+            processingTime?: number;
+          }> | null;
         };
         Insert: {
           id?: string;
@@ -102,6 +113,17 @@ export interface Database {
           credits_used?: number;
           created_at?: string;
           completed_at?: string | null;
+          updated_at?: string | null;
+          current_step?: string | null;
+          progress_percentage?: number | null;
+          character_image_url?: string | null;
+          product_analysis?: Record<string, unknown> | null;
+          scenes?: Array<{
+            sceneNumber: number;
+            sceneType: string;
+            sceneImageUrl: string;
+            processingTime?: number;
+          }> | null;
         };
         Update: {
           id?: string;
@@ -122,6 +144,17 @@ export interface Database {
           credits_used?: number;
           created_at?: string;
           completed_at?: string | null;
+          updated_at?: string | null;
+          current_step?: string | null;
+          progress_percentage?: number | null;
+          character_image_url?: string | null;
+          product_analysis?: Record<string, unknown> | null;
+          scenes?: Array<{
+            sceneNumber: number;
+            sceneType: string;
+            sceneImageUrl: string;
+            processingTime?: number;
+          }> | null;
         };
       };
       pricing_tiers: {
