@@ -1,0 +1,56 @@
+{
+  "_meta": {
+    "description": "UI components and layouts - Written by AntiGravity/UI Agent",
+    "lastUpdated": null,
+    "version": "1.0.0",
+    "agent": "antigravity"
+  },
+  "designSystem": {
+    "framework": null,
+    "colorScheme": null,
+    "typography": null,
+    "spacing": null,
+    "breakpoints": []
+  },
+  "components": {
+    "atoms": [],
+    "molecules": [],
+    "organisms": [],
+    "templates": []
+  },
+  "pages": [],
+  "layouts": {
+    "main": null,
+    "auth": null,
+    "dashboard": null
+  },
+  "navigation": {
+    "primary": [],
+    "secondary": [],
+    "footer": []
+  },
+  "forms": [],
+  "modals": [],
+  "tables": [],
+  "charts": [],
+  "accessibility": {
+    "wcagLevel": null,
+    "ariaLabels": true,
+    "keyboardNavigation": true
+  },
+  "responsiveness": {
+    "mobile": true,
+    "tablet": true,
+    "desktop": true
+  },
+  "handoffFromSpecs": {
+    "received": false,
+    "dataContracts": [],
+    "apiEndpoints": []
+  },
+  "handoffToValidators": {
+    "ready": false,
+    "componentsToTest": [],
+    "notes": []
+  }
+}

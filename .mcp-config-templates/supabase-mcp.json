@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "_comment": "Supabase MCP Server Configuration Template - DO NOT hardcode tokens!",
+  "mcpServers": {
+    "supabase": {
+      "command": "npx",
+      "args": ["-y", "@supabase/mcp-server"],
+      "env": {
+        "SUPABASE_ACCESS_TOKEN": "${SUPABASE_ACCESS_TOKEN}",
+        "SUPABASE_PROJECT_REF": "${SUPABASE_PROJECT_REF}"
+      }
+    }
+  },
+  "_instructions": {
+    "setup": [
+      "1. Copy this file to your project's .mcp.json",
+      "2. Set environment variables in your shell or .env file:",
+      "   export SUPABASE_ACCESS_TOKEN='your-access-token'",
+      "   export SUPABASE_PROJECT_REF='your-project-ref'",
+      "3. Never commit actual tokens to git!"
+    ],
+    "get_access_token": {
+      "url": "https://supabase.com/dashboard/account/tokens",
+      "description": "Generate access token from Supabase dashboard"
+    },
+    "get_project_ref": {
+      "description": "Find project ref in Supabase dashboard URL: app.supabase.com/project/YOUR_PROJECT_REF"
+    },
+    "mcp_endpoint": {
+      "url": "https://mcp.supabase.com/mcp",
+      "description": "Official Supabase MCP endpoint"
+    }
+  },
+  "_security": {
+    "warning": "NEVER hardcode tokens in this file!",
+    "recommended": "Use environment variables (${VAR}) for all sensitive values",
+    "gitignore": "Ensure .env files are in .gitignore",
+    "access_token_scope": "Access tokens have broad permissions - handle with care"
+  },
+  "_capabilities": {
+    "database": "Query and manage PostgreSQL database",
+    "auth": "Manage authentication and users",
+    "storage": "Manage file storage buckets",
+    "edge_functions": "Deploy and manage Edge Functions",
+    "realtime": "Configure realtime subscriptions"
+  }
+}

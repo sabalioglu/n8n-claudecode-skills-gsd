@@ -1,0 +1,46 @@
+{
+  "_meta": {
+    "description": "Architecture and data model specifications - Written by Claude Code",
+    "lastUpdated": null,
+    "version": "1.0.0",
+    "agent": "claude-code"
+  },
+  "architecture": {
+    "pattern": null,
+    "description": null,
+    "layers": [],
+    "decisions": []
+  },
+  "dataModel": {
+    "entities": [],
+    "relationships": [],
+    "migrations": []
+  },
+  "api": {
+    "type": null,
+    "baseUrl": null,
+    "endpoints": [],
+    "authentication": null
+  },
+  "services": {
+    "internal": [],
+    "external": []
+  },
+  "security": {
+    "authentication": null,
+    "authorization": null,
+    "encryption": null
+  },
+  "infrastructure": {
+    "hosting": null,
+    "database": null,
+    "cache": null,
+    "cdn": null
+  },
+  "handoffToUI": {
+    "ready": false,
+    "components": [],
+    "dataContracts": [],
+    "notes": []
+  }
+}

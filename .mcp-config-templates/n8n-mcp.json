@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "_comment": "n8n MCP Server Configuration Template - DO NOT hardcode tokens!",
+  "mcpServers": {
+    "n8n": {
+      "command": "npx",
+      "args": ["-y", "n8n-mcp"],
+      "env": {
+        "N8N_MCP_BASE_URL": "${N8N_MCP_URL}",
+        "N8N_MCP_API_KEY": "${N8N_MCP_TOKEN}"
+      }
+    }
+  },
+  "_instructions": {
+    "setup": [
+      "1. Copy this file to your project's .mcp.json",
+      "2. Set environment variables in your shell or .env file:",
+      "   export N8N_MCP_URL='https://your-n8n-instance.com'",
+      "   export N8N_MCP_TOKEN='your-api-token'",
+      "3. Never commit actual tokens to git!"
+    ],
+    "hosted_service": {
+      "url": "https://dashboard.n8n-mcp.com",
+      "description": "Use the hosted n8n-MCP service for easy setup"
+    },
+    "local_setup": {
+      "command": "npx n8n-mcp",
+      "description": "Run n8n-MCP locally for development"
+    },
+    "docker_setup": {
+      "command": "docker pull ghcr.io/czlonkowski/n8n-mcp:latest",
+      "description": "Run n8n-MCP in Docker for isolation"
+    }
+  },
+  "_security": {
+    "warning": "NEVER hardcode tokens in this file!",
+    "recommended": "Use environment variables (${VAR}) for all sensitive values",
+    "gitignore": "Ensure .env files are in .gitignore"
+  }
+}
