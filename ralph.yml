@@ -1,0 +1,64 @@
+# ralph.yml - Kemik Repo için Ralph Orchestrator Config
+cli:
+  backend: "claude"
+  prompt_mode: "arg"
+
+event_loop:
+  completion_promise: "TOOLKIT_UPDATE_COMPLETE"
+  max_iterations: 50
+  max_runtime_seconds: 7200
+  idle_timeout_secs: 1800
+  starting_event: "toolkit.update.start"
+
+core:
+  scratchpad: ".agent/scratchpad.md"
+  specs_dir: "./specs/"
+  guardrails:
+    - "Kemik repo hiçbir zaman proje kodu içermez"
+    - "Template dosyaları değişirse tüm dokümantasyon güncellenir"
+    - "Branch protection kurallarına uyulur"
+
+hats:
+  toolkit_architect:
+    name: "🏗️ Toolkit Architect"
+    triggers: ["toolkit.update.start"]
+    publishes: ["templates.ready", "docs.update.needed"]
+    instructions: |
+      Sen kemik repo'nun mimarısını tasarlayan bir mimarsın.
+      
+      Görevlerin:
+      1. Template dosyalarını güncelle (templates/project-starter/)
+      2. Yeni projelerin ihtiyaç duyduğu tüm dosyaları ekle
+      3. README ve dokümantasyonu güncelle
+      4. Değişiklikleri scratchpad'e kaydet
+      
+      templates.ready event'ini yayınla.
+
+  docs_writer:
+    name: "📝 Documentation Writer"
+    triggers: ["docs.update.needed", "templates.ready"]
+    publishes: ["docs.complete"]
+    instructions: |
+      Sen dokümantasyon yazarısın.
+      
+      Görevlerin:
+      1. docs/ klasöründeki tüm rehberleri güncelle
+      2. QUICKSTART.md, RALPH-SETUP.md, MCP-SETUP.md kontrol et
+      3. Template değişikliklerini dokümante et
+      
+      docs.complete event'ini yayınla.
+
+  validator:
+    name: "✅ Validator"
+    triggers: ["docs.complete"]
+    publishes: ["validation.done"]
+    instructions: |
+      Sen kalite kontrol uzmanısın.
+      
+      Kontroller:
+      1. Tüm template dosyaları mevcut mu?
+      2. Dokümantasyon güncel mi?
+      3. .gitignore doğru mu?
+      4. MCP template'leri geçerli YAML mı?
+      
+      Tüm kontroller geçerse: TOOLKIT_UPDATE_COMPLETE

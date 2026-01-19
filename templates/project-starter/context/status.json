@@ -1,0 +1,74 @@
+{
+  "_meta": {
+    "description": "Build, test, and lint status - Written by Validator scripts",
+    "lastUpdated": null,
+    "version": "1.0.0",
+    "agent": "validators"
+  },
+  "build": {
+    "status": null,
+    "lastRun": null,
+    "duration": null,
+    "errors": [],
+    "warnings": [],
+    "artifacts": []
+  },
+  "tests": {
+    "status": null,
+    "lastRun": null,
+    "duration": null,
+    "framework": null,
+    "summary": {
+      "total": 0,
+      "passed": 0,
+      "failed": 0,
+      "skipped": 0
+    },
+    "coverage": {
+      "statements": null,
+      "branches": null,
+      "functions": null,
+      "lines": null
+    },
+    "failedTests": []
+  },
+  "lint": {
+    "status": null,
+    "lastRun": null,
+    "tool": null,
+    "summary": {
+      "errors": 0,
+      "warnings": 0,
+      "fixable": 0
+    },
+    "issues": []
+  },
+  "typeCheck": {
+    "status": null,
+    "lastRun": null,
+    "errors": []
+  },
+  "security": {
+    "status": null,
+    "lastRun": null,
+    "vulnerabilities": {
+      "critical": 0,
+      "high": 0,
+      "medium": 0,
+      "low": 0
+    },
+    "issues": []
+  },
+  "deployment": {
+    "environment": null,
+    "status": null,
+    "lastDeploy": null,
+    "version": null,
+    "url": null
+  },
+  "overall": {
+    "health": null,
+    "blockers": [],
+    "recommendations": []
+  }
+}

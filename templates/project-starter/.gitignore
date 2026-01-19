@@ -1,0 +1,26 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Testing
+coverage/
+
+# Production
+build/
+dist/
+
+# Env
+.env
+.env.local
+.env.production
+
+# MCP (actual config, not template)
+.mcp.json
+
+# Ralph
+.agent/
+
+# OS
+.DS_Store
+*.log

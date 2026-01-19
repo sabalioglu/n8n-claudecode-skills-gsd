@@ -1,0 +1,45 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(date:*)",
+      "Bash(echo:*)",
+      "Bash(cat:*)",
+      "Bash(ls:*)",
+      "Bash(mkdir:*)",
+      "Bash(wc:*)",
+      "Bash(head:*)",
+      "Bash(tail:*)",
+      "Bash(sort:*)",
+      "Bash(grep:*)",
+      "Bash(tr:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git status:*)",
+      "Bash(git log:*)",
+      "Bash(git diff:*)",
+      "Bash(git tag:*)",
+      "Bash(npm run:*)",
+      "Bash(npm test:*)",
+      "Bash(npm install:*)",
+      "Bash(npx:*)"
+    ],
+    "deny": []
+  },
+  "model": "claude-sonnet-4-20250514",
+  "contextFiles": [
+    "PROJECT.md",
+    "ROADMAP.md",
+    "STATE.md",
+    "context/specs.json",
+    "context/ui.json",
+    "context/status.json"
+  ],
+  "hooks": {
+    "preCommit": [],
+    "postCommit": []
+  },
+  "mcpServers": {
+    "enabled": true,
+    "configPath": ".mcp.json"
+  }
+}
