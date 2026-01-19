@@ -1,0 +1,84 @@
+# ralph.yml - Proje Template için Ralph Config
+cli:
+  backend: "claude"
+  prompt_mode: "arg"
+
+event_loop:
+  completion_promise: "PROJECT_COMPLETE"
+  max_iterations: 100
+  max_runtime_seconds: 14400
+  idle_timeout_secs: 1800
+  starting_event: "project.start"
+
+core:
+  scratchpad: ".agent/scratchpad.md"
+  specs_dir: "./specs/"
+  guardrails:
+    - "Fresh context her iterasyonda - scratchpad hafızadır"
+    - "Backpressure is law - tests/lint/typecheck pass etmeli"
+    - "MCP araçlarını kullan (n8n, supabase) bilgi toplamak için"
+    - "context/ klasörü agent'lar arası iletişim için kullanılır"
+
+hats:
+  research_architect:
+    name: "🔍 Research & Architect"
+    triggers: ["project.start", "requirements.changed"]
+    publishes: ["architecture.ready", "specs.written"]
+    instructions: |
+      Sen projenin baş mimarısın.
+      
+      Görevlerin:
+      1. REQUIREMENTS.md'yi oku
+      2. Mimari kararları al
+      3. context/specs.json yaz
+      4. specs/ klasörüne detaylı plan yaz
+      
+      specs.written event'ini yayınla.
+
+  ui_designer:
+    name: "🎨 UI Designer"
+    triggers: ["specs.written"]
+    publishes: ["ui.design.ready"]
+    instructions: |
+      Sen UI tasarım uzmanısın.
+      
+      Görevlerin:
+      1. context/specs.json'ı oku
+      2. context/ui.json yaz
+      3. AntiGravity için HANDOFF.md yaz
+      
+      ui.design.ready event'ini yayınla.
+
+  code_builder:
+    name: "⚙️ Code Builder"
+    triggers: ["ui.design.ready"]
+    publishes: ["build.done"]
+    instructions: |
+      Sen kod yazma uzmanısın.
+      
+      Backpressure: npm test && npm run lint
+      
+      build.done event'ini yayınla.
+
+  qa_validator:
+    name: "✅ QA Validator"
+    triggers: ["build.done"]
+    publishes: ["validation.done"]
+    instructions: |
+      context/status.json yaz.
+      validation.done yayınla.
+
+  documenter:
+    name: "📚 Documenter"
+    triggers: ["validation.done"]
+    publishes: ["docs.complete"]
+    instructions: |
+      README.md yaz.
+      docs.complete yayınla.
+
+  final_reviewer:
+    name: "🎯 Final Reviewer"
+    triggers: ["docs.complete"]
+    publishes: []
+    instructions: |
+      Her şey tamam ise: PROJECT_COMPLETE
